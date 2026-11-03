@@ -13,6 +13,11 @@ public class ItemDefinitionsSO : ScriptableObject
 
     public ItemType itemType;
 
+    public Mesh mesh;
+    public Material material;
+
+    public Sprite itemSprite;
+
     public string itemName;
     public int itemID;
     public bool isStackable;

@@ -8,7 +8,7 @@ public class PlayerInteract : MonoBehaviour
     private float sphereRadius = 3f;
     private Collider[] detectedColliders = new Collider[10];
 
-    private IInteractable interactableTarget;
+    public IInteractable InteractableTarget { get; private set; }
    
     private void Update()
     {
@@ -26,9 +26,10 @@ public class PlayerInteract : MonoBehaviour
 
     private void Interact()
     {
-        if(interactableTarget != null)
+        if(InteractableTarget != null)
         {
-            interactableTarget.Interact();
+            InteractableTarget.Interact();
+            
         }
         else
         {
@@ -76,7 +77,7 @@ public class PlayerInteract : MonoBehaviour
 
     private void SetInteractableTarget(IInteractable target)
     {        
-        interactableTarget = target;
+        InteractableTarget = target;
     }
 
 

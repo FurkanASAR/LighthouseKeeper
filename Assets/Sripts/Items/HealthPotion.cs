@@ -5,6 +5,9 @@ public class HealthPotion : MonoBehaviour, IInteractable
     [SerializeField] private ItemDefinitionsSO ItemDefinitionsSO;
 
     public Vector3 InteractionPoint => transform.position;
+
+    public string InteractPrompt => ItemDefinitionsSO.itemName;
+
     private Inventory playerInventory;
 
     private void Start()
@@ -14,9 +17,8 @@ public class HealthPotion : MonoBehaviour, IInteractable
 
     public void Collect()
     {
-        Debug.Log(playerInventory);
-        Debug.Log(ItemDefinitionsSO);
-        playerInventory.AddItem(ItemDefinitionsSO);
+       
+        playerInventory.TryAddItem(ItemDefinitionsSO);
     }
 
     public void Interact()

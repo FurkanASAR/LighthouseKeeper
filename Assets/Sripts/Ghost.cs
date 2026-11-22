@@ -1,18 +1,20 @@
-using System.Net.Http.Headers;
-using Unity.VisualScripting;
-using UnityEditor.AdaptivePerformance.Editor;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class Ghost : MonoBehaviour
+public class Ghost : MonoBehaviour, IInteractor
 {
+    public InteractorType InteractorType => InteractorType.Enemy;
+
     [SerializeField] NavMeshAgent agent;
     [SerializeField] Vector3 destination = new();
 
+    [SerializeField] GhostBehaviourTree ghostBehaviourTree;
+    [SerializeField] private Transform playerTransform;
 
-    private Transform playerTransform;
 
-    private enum State
+
+
+    public enum State
     {
         Idle,
         Chasing,
@@ -33,23 +35,28 @@ public class Ghost : MonoBehaviour
         agent.SetDestination(destination);
     }
 
+    private bool myBool = false;
     private void Update()
     {
-        ChangeState();
+        HandleDecisionTree();
         HandleStates();
+        
+        if(Input.GetKeyDown(KeyCode.Space))
+            myBool = !myBool;
+        
     }
 
-    private void ChangeState()
+    public bool MyBool()
     {
-        if (playerTransform != null)
-        {
-            state = State.Chasing;
-        }
-        else
-        {
-            state = State.Patrolling;
-        }
+        return myBool;
     }
+
+    private void HandleDecisionTree()
+    {
+        state =  ghostBehaviourTree.GetBehaviour();
+    }
+
+
     private void HandleStates()
     {
         switch (state)
@@ -85,6 +92,7 @@ public class Ghost : MonoBehaviour
         destination = new Vector3(Random.Range(-10f, 10f), 0f, Random.Range(-10f, 10f));
         agent.SetDestination(destination);
     }
+
     private bool HasReachedDestination()
     {
         if (agent.pathPending)
@@ -100,14 +108,13 @@ public class Ghost : MonoBehaviour
         return false;
     }
 
-    public void SetPlayerTransform(Transform playerTransform)
-    {
-        this.playerTransform = playerTransform;
-    }
-
     public void ResetAgentPath()
     {
         agent.ResetPath();
     }
 
+    public Transform GetPlayerTransform()
+    {
+        return playerTransform;
+    }
 }

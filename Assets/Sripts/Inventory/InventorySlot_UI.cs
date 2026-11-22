@@ -3,48 +3,39 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using static Inventory;
+
+
 public class InventorySlot_UI : MonoBehaviour, IPointerClickHandler
 {
 
-
+    public event EventHandler<OnInventoryChangedEventArgs> OnInventorySlotClicked;
     [SerializeField] private Image image;
     [SerializeField] private TextMeshProUGUI itemAmountText;
-    private InventorySlot inventorySlot;
-    private Inventory_UI inventory_UI;
+    private InventorySlot inventorySlot;    
 
- 
-
-    public void SetInventorySlot(InventorySlot inventorySlot)
+    public void SetInventorySlot(InventorySlot slot)
     {
-        this.inventorySlot = inventorySlot;
-        RefreshUI();
+        inventorySlot = slot;
     }
 
-    public void SetUIInventory(Inventory_UI inventory_UI)
-    {
-        this.inventory_UI = inventory_UI;        
-    }
-    private void RefreshUI()
+    public void RefreshUI()
     {
         if (inventorySlot == null)
+        {
             return;
+        }
 
-        image.sprite = inventorySlot.itemDefinitionsSO.itemSprite;
-        Debug.Log("inventory slot itemAmount: " + inventorySlot.itemAmount);
+        image.sprite = inventorySlot.itemSO.itemSprite;        
         itemAmountText.text = inventorySlot.itemAmount.ToString();        
 
-    }
-
-    public void DestroySelf()
-    {        
-        Destroy(gameObject);
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            Debug.Log(inventorySlot.itemDefinitionsSO.itemName);    
+            Debug.Log(inventorySlot.itemSO.itemName);    
 
 
         }
@@ -55,10 +46,20 @@ public class InventorySlot_UI : MonoBehaviour, IPointerClickHandler
         }
     }
 
+    public InventorySlot GetInventorySlot()
+    {
+        return inventorySlot;
+    }
+
+    public void DestroySlot()
+    {
+        inventorySlot = null;
+        gameObject.SetActive(false);
+    }
 
     private void DropItem()
     {
-        inventorySlot.DecreaseAmount();     
+        OnInventorySlotClicked?.Invoke(this, new OnInventoryChangedEventArgs(inventorySlot));
     }
 
     private void UseItem()

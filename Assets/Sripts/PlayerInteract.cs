@@ -18,17 +18,13 @@ public class PlayerInteract : MonoBehaviour
         {
             Interact();
         }
-
-
-
-
     }
 
     private void Interact()
     {
         if(InteractableTarget != null)
         {
-            InteractableTarget.Interact();
+            InteractableTarget.Interact(transform.parent.gameObject);
             
         }
         else

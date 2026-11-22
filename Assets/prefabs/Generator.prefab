@@ -101,6 +101,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Generator
   sphereCollider: {fileID: 2821659122539218662}
+  interactionCanvasScript: {fileID: 0}
+  neededItemsList:
+  - itemDefinition: {fileID: 11400000, guid: ae7a521fbbc70d54bb2382e175a4bc03, type: 2}
+    requiredAmount: 2
+  - itemDefinition: {fileID: 11400000, guid: f1ad2f108292c3c4aa5a3ee08528a4fb, type: 2}
+    requiredAmount: 3
+  - itemDefinition: {fileID: 11400000, guid: 37dcc0b5a7061fd4aa2402c655d2e69a, type: 2}
+    requiredAmount: 1
 --- !u!1 &4463140339078984099
 GameObject:
   m_ObjectHideFlags: 0

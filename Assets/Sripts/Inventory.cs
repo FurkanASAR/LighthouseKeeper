@@ -1,15 +1,21 @@
 using System;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
-using static InventorySlot;
+using System.Linq;
 
 public class Inventory
 {
-    public event EventHandler OnInventoryChanged;
+    public event EventHandler<OnInventoryChangedEventArgs> OnInventoryChanged;
+    public class OnInventoryChangedEventArgs : EventArgs
+    {
+        public OnInventoryChangedEventArgs(InventorySlot slot)
+        {
+            this.Slot = slot;
+        }
+        public InventorySlot Slot { get; private set; }
+    }
 
-    private int maximumInventorySlotCount = 10;
-    private int currentInventorySlotCount = 0;
+    private int maximumInventorySlotCount = 5;
     private List<InventorySlot> inventorySlotList;
 
     public Inventory()
@@ -27,50 +33,36 @@ public class Inventory
 
         if (item.isStackable)
         {
-            if (TryStacingItem(item))
+            if (TryStackingItem(item))
             {
-                OnInventoryChanged?.Invoke(this, EventArgs.Empty);
                 return true;
             }
         }
 
-        InventorySlot slot = new(item);
-
-
-        return TryAddNewSlotToList(slot);
+        return TryAddNewItem(item);
     }
 
-    private bool TryAddNewSlotToList(InventorySlot newSlot)
+    private bool TryAddNewItem(ItemDefinitionsSO item)
     {
         if (inventorySlotList.Count >= maximumInventorySlotCount)
         {
             Debug.Log("Maximum inventory capacity reached!");
             return false;
         }
+        InventorySlot newSlot = new(item);
 
-        newSlot.itemAmount++;
-        newSlot.OnSlotItemZero += Slot_OnSlotItemZero;
         inventorySlotList.Add(newSlot);
 
-        OnInventoryChanged?.Invoke(this, EventArgs.Empty);
+        OnInventoryChanged?.Invoke(this, new OnInventoryChangedEventArgs(newSlot));
         return true;
     }
 
-    private void Slot_OnSlotItemZero(object sender, OnSLotItemZeroEventArgs e)
-    {
-        if (!inventorySlotList.Remove(e.thisSlot))
-        {
-            return;
-        }
-        OnInventoryChanged.Invoke(this, EventArgs.Empty);
-    }
-
-    private bool TryStacingItem(ItemDefinitionsSO item)
+    private bool TryStackingItem(ItemDefinitionsSO item)
     {
         for (int i = 0; i < inventorySlotList.Count; i++)
         {
             InventorySlot currentSlot = inventorySlotList[i];
-            if (currentSlot.itemID != item.itemID)
+            if (currentSlot.itemSO.itemID != item.itemID)
             {
                 continue;
             }
@@ -81,7 +73,8 @@ public class Inventory
             }
             else if (currentSlot.itemAmount < item.maxStackSize)
             {
-                currentSlot.itemAmount++;                
+                currentSlot.itemAmount++;
+                OnInventoryChanged?.Invoke(this, new OnInventoryChangedEventArgs(currentSlot));
                 return true;
             }
         }
@@ -93,73 +86,130 @@ public class Inventory
         return inventorySlotList.Count;
     }
 
-
-    public List<InventorySlot> GetInventorySlotList()
+    public void RemoveItem(object sender, OnInventoryChangedEventArgs e, int removeAmount)
     {
-        return inventorySlotList;
-    }
+        InventorySlot slot = e.Slot;
 
-}
-
-public class InventorySlot
-{
-
-    public event EventHandler<OnSLotItemZeroEventArgs> OnSlotItemZero;
-    public class OnSLotItemZeroEventArgs : EventArgs
-    {
-        public InventorySlot thisSlot;
-    }
-    public ItemDefinitionsSO itemDefinitionsSO;
-    public int itemID;
-    public InventorySlot(ItemDefinitionsSO itemDefinitionsSO)
-    {
-        this.itemDefinitionsSO = itemDefinitionsSO;
-        this.itemID = itemDefinitionsSO.itemID;
-
-    }
-
-    public int itemAmount = 0;
-
-    public void FireItemZeroEVent()
-    {
-        OnSlotItemZero.Invoke(this, new OnSLotItemZeroEventArgs
+        if (slot == null)
         {
-            thisSlot = this
-        });
-
-        Debug.Log("Event fired!");
-
-        Debug.Log(this);
-    }
-
-    public void DecreaseAmount()
-    {
-        if (itemAmount <= 0)
-        {
+            Debug.LogWarning("Attempted to drop an item from a null inventory slot.");
             return;
         }
 
-        itemAmount--;
+        slot.itemAmount -= removeAmount;
+        int remainingAmount = slot.itemAmount;
 
-        if (itemAmount == 0)
+        if (remainingAmount < 0)
         {
-            OnSlotItemZero.Invoke(this, new OnSLotItemZeroEventArgs
-            {
-                thisSlot = this
-            });
-
+            slot.itemAmount = 0;
+            remainingAmount *= -1;
         }
 
+        if (slot.itemAmount == 0)
+        {
+            slot.DestroySlot();
+            inventorySlotList.Remove(slot);
+
+        }
+        OnInventoryChanged?.Invoke(this, e);
+        return;
+    }
 
 
+    public void RemoveNeededItems(List<NeededItem> neededItems)
+    {
+        foreach (var neededItem in neededItems)
+        {
+            ItemDefinitionsSO itemDefinition = neededItem.itemDefinition;
+            int requiredAmount = neededItem.requiredAmount;
+            int remainingAmountToRemove = requiredAmount;
 
+            foreach (var slot in inventorySlotList.ToList())
+            {
+                if (slot.itemSO == itemDefinition)
+                {
+                    RemoveItem(this, new OnInventoryChangedEventArgs(slot), remainingAmountToRemove);
+                    if(remainingAmountToRemove <= 0)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        inventorySlotList.RemoveAll(slot => slot.itemAmount <= 0);
+    }
+
+    public void RemoveItem(object sender, OnInventoryChangedEventArgs e, int removeAmount, out int remainingAmountToRetrun)
+    {
+        InventorySlot slot = e.Slot;
+
+        if (slot == null)
+        {
+            Debug.LogWarning("Attempted to drop an item from a null inventory slot.");
+            remainingAmountToRetrun = 0;
+            return;
+        }
+
+        slot.itemAmount -= removeAmount;
+        int remainingAmount = slot.itemAmount;
+
+        if (remainingAmount < 0)
+        {
+            slot.itemAmount = 0;
+        }
+
+        slot.DestroySlot();
+        inventorySlotList.Remove(slot);
+
+        OnInventoryChanged?.Invoke(this, e);
+
+        remainingAmountToRetrun = remainingAmount;
+        return;
+    }
+
+    public bool HasAllItems(List<NeededItem> neededItems)
+    {
+        foreach (var neededItem in neededItems)
+        {
+            if (!HasItem(neededItem))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private bool HasItem(NeededItem neededItem)
+    {
+        ItemDefinitionsSO neededItemDefinitionSo = neededItem.itemDefinition;
+        int requiredAmount = neededItem.requiredAmount;
+
+        int currentAmount = 0;
+
+        foreach (var slot in inventorySlotList)
+        {
+            if (slot.itemSO == neededItemDefinitionSo)
+            {
+                currentAmount += slot.itemAmount;
+            }
+        }
+
+        return currentAmount >= requiredAmount;
     }
 }
+public class InventorySlot
+{
+    public InventorySlot(ItemDefinitionsSO itemSO)
+    {
+        this.itemSO = itemSO;
+        itemAmount = 1;
+    }
+    public ItemDefinitionsSO itemSO { get; private set; }
+    public int itemAmount;
 
-
-
-
-
-
-
-
+    public void DestroySlot()
+    {
+        itemSO = null;
+        itemAmount = 0;
+    }
+}

@@ -6,21 +6,13 @@ public class ItemWorld : MonoBehaviour, IInteractable
     public string InteractPrompt => itemSO.itemName;
     [SerializeField] private ItemDefinitionsSO itemSO;
 
-    private Inventory playerInventory;
-
-
-
-    private void Start()
+    public void Interact(GameObject interactor)
     {
-        playerInventory = GameManager.Instance.GetPlayer().GetInventory();
-    }
-
-    public void Interact()
-    {
-        if (playerInventory.TryAddItem(itemSO))
+        if(interactor.TryGetComponent(out Player player))
         {
-            //Destroy(gameObject);
-        }
+            Inventory playerInventory = player.GetInventory();
+            playerInventory.TryAddItem(itemSO);
+        }              
     }
 
     private void Awake()

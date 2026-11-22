@@ -6,23 +6,14 @@ public class HealthPotion : MonoBehaviour, IInteractable
 
     public Vector3 InteractionPoint => transform.position;
 
-    public string InteractPrompt => ItemDefinitionsSO.itemName;
+    public string InteractPrompt => ItemDefinitionsSO.itemName;  
 
-    private Inventory playerInventory;
-
-    private void Start()
+    public void Interact(GameObject interactor)
     {
-        playerInventory = GameManager.Instance.GetPlayer().GetInventory();
-    }
-
-    public void Collect()
-    {
-       
-        playerInventory.TryAddItem(ItemDefinitionsSO);
-    }
-
-    public void Interact()
-    {
-        Collect();
+        if(interactor.TryGetComponent(out Player player))
+        {
+            Inventory playerInventory = player.GetInventory();
+            playerInventory.TryAddItem(ItemDefinitionsSO);
+        }
     }
 }

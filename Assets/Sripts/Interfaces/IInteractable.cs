@@ -6,5 +6,5 @@ public interface IInteractable
     public string InteractPrompt { get; }
 
 
-    public void Interact();
+    public void Interact(GameObject interactor);
 }

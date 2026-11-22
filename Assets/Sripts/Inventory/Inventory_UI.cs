@@ -1,96 +1,99 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
-using Unity.VisualScripting;
-
+using UnityEngine.UI;
 
 
 public class Inventory_UI : MonoBehaviour
 {
     public event EventHandler OnInventoryRefreshed;
 
-
-    [SerializeField] private Transform inventorySlot_UI;
-    [SerializeField] private Transform canvasTransform;
+    [SerializeField] private Transform slotContainerLayout;   
     [SerializeField] private Player player;
 
-    
-    private Inventory playerInventory;
-    private int paddingX = 40;
-    private int spaceX = 30;
 
-    private int paddingY = 20;
-    private int spaceY = 20;
-    public List<Transform> inventorySlotList_UI = new();
-    private List<InventorySlot> inventorySlotList = new();    
+    private int dropAmount = 1;
 
+    private List<RectTransform> inventorySlotRecTransformList = new();
+    private Inventory playerInventory;    
 
     private void Start()
     {
         playerInventory = player.GetInventory();
         playerInventory.OnInventoryChanged += PlayerInventory_OnInventoryChanged;
-
-        RefreshInventory();
+        
+        InitializeUISlots();
     }
 
-    private void Update()
+    private void OnDisable()
     {
-        if (Input.GetKeyDown(KeyCode.B))
+        playerInventory.OnInventoryChanged -= PlayerInventory_OnInventoryChanged;
+    }
+    private void PlayerInventory_OnInventoryChanged(object sender, Inventory.OnInventoryChangedEventArgs e)
+    {
+        HandleSlotChanges(e.Slot);
+    }
+
+    private void HandleSlotChanges(InventorySlot slot)
+    {
+        if(slot.itemSO == null)
         {
-            DestroyCurrentSlots();
+            ClearUISLot(slot);
+            return;
         }
-    }
-
-    private void PlayerInventory_OnInventoryChanged(object sender, EventArgs e)
-    {
-        RefreshInventory();
-    }
-    private void RefreshInventory()
-    {
-        DestroyCurrentSlots();
-        CreateNewSLot();        
-
-        OnInventoryRefreshed?.Invoke(this, EventArgs.Empty);
-    }
-    private void DestroyCurrentSlots()
-    {
-        for (int i = 0; i < inventorySlotList_UI.Count; i++)
+        foreach(RectTransform rectTransform in inventorySlotRecTransformList)
         {
-
-            inventorySlotList_UI[i].GetComponent<InventorySlot_UI>().DestroySelf();
-
-        }
-        inventorySlotList_UI.Clear();
-    }
-    private void CreateNewSLot()
-    {
-        inventorySlotList = playerInventory.GetInventorySlotList();
-
-        int x = 0;
-        int y = 0;
-        int itemCellSize = 120;
-
-        int inventorySlotCount = playerInventory.GetInventoryCount();        
-
-        for (int i = 0; i < inventorySlotCount; i++)
-        {            
-            Transform newSlotUITransform = Instantiate(inventorySlot_UI, canvasTransform);
-            newSlotUITransform.GetComponent<InventorySlot_UI>().SetUIInventory(this);
-            newSlotUITransform.GetComponent<InventorySlot_UI>().SetInventorySlot(inventorySlotList[i]);
-            RectTransform newSlotRectTransform = newSlotUITransform.GetComponent<RectTransform>();
-
-
-            newSlotRectTransform.anchoredPosition = new Vector2(paddingX + (x * itemCellSize), paddingY + (-y * itemCellSize));
-            x++;
-            if (x > 3)
+            InventorySlot_UI slotUI = rectTransform.GetComponent<InventorySlot_UI>();
+            if (slotUI.GetInventorySlot() == slot)
             {
-                x = 0;
-                y++;
-            }            
-            inventorySlotList_UI.Add(newSlotUITransform);
-
+                slotUI.RefreshUI();                
+                return;
+            }
         }
 
-
+        AddNewSlot(slot);
     }
+
+    private void ClearUISLot(InventorySlot slot)
+    {
+        Debug.Log("Clearing UI slot");
+
+        foreach (RectTransform rectTransform in inventorySlotRecTransformList)
+        {
+            InventorySlot_UI slotUI = rectTransform.GetComponent<InventorySlot_UI>();
+            if (slotUI.GetInventorySlot() == slot)
+            {
+                slotUI.DestroySlot();
+            }
+        }
+    }
+
+    private void AddNewSlot(InventorySlot slot)
+    {
+        foreach (RectTransform rectTransform in inventorySlotRecTransformList)
+        {
+            if (!rectTransform.gameObject.activeSelf)
+            {
+                rectTransform.gameObject.SetActive(true);
+                InventorySlot_UI slotUI = rectTransform.GetComponent<InventorySlot_UI>();
+
+                slotUI.SetInventorySlot(slot);
+                slotUI.RefreshUI();                
+
+                return;
+            }
+        }
+    }
+    private void InitializeUISlots()
+    {
+        foreach (RectTransform rectTransform in slotContainerLayout)
+        {
+            inventorySlotRecTransformList.Add(rectTransform);
+            rectTransform.GetComponent<Image>().sprite = null;
+            InventorySlot_UI slotUI = rectTransform.GetComponent<InventorySlot_UI>();
+            slotUI.OnInventorySlotClicked += (sender, e) => playerInventory.RemoveItem(sender, e, dropAmount);
+            rectTransform.gameObject.SetActive(false);            
+        }
+    }
+
 }
